@@ -1,0 +1,149 @@
+<img id="original" width="64" height="64" src="img.png">
+<canvas id="canvas" width="64" height="64"></canvas>
+<canvas id="canvas1" width="64" height="64"></canvas>
+<script>
+
+	var quality   = 8;
+	var padSta    = (256/quality).toString(2).length - 1;
+	var bitLength = 2;
+	var headType  = 4;
+
+	var ABC = {
+	  toAscii: function(bin) {
+	    return bin.replace(/\s*[01]{8}\s*/g, function(bin) {
+	      return String.fromCharCode(parseInt(bin, 2))
+	    })
+	  },
+	  toBinary: function(str, spaceSeparatedOctets) {
+	    return str.replace(/[\s\S]/g, function(str) {
+	      str = ABC.zeroPad(str.charCodeAt().toString(2));
+	      return !1 == spaceSeparatedOctets ? str : str
+	    })
+	  },
+	  zeroPad: function(num) {
+	    return "00000000".slice(String(num).length) + num
+	  }
+	};
+
+	var element = document.getElementById("canvas1");
+    c = element.getContext("2d");
+
+    width = element.width;
+    height = element.height;
+
+    imageData = c.createImageData(width, height);
+
+    function setPixel(imageData, x, y, r, g, b, a) {
+	    index = (x + y * imageData.width) * 4;
+	    imageData.data[index+0] = r;
+	    imageData.data[index+1] = g;
+	    imageData.data[index+2] = b;
+	    imageData.data[index+3] = a;
+
+	    c.putImageData(imageData, 0, 0);
+	}
+
+	function pad(num,size) {
+	    var s = "000000000" + num;
+	    return s.substr(s.length-size);
+	}
+
+	function bit(val){
+
+		var min    = Math.min.apply(Math, val);
+		var head   = parseInt(headType/min);
+		var output = pad((head).toString(2),3);
+
+		for(x=0;x<val.length;x++){
+			output += pad((val[x] - min).toString(2),bitLength);
+		}
+
+		return output;
+
+	}
+
+	function solve(val,length){
+		var res = headType/parseInt(val.substr(0, 3),2);
+		var num = [];
+
+		for(i=0;i<length;i++){
+			num[i] = res+parseInt(val.substr(3+i*bitLength, bitLength),2);
+		}
+		
+		return num;
+	}
+
+	var pixels = [];
+	var order  = [];
+	var dtc    = [];
+
+	window.onload = function() {
+	    var c=document.getElementById("canvas");
+	    var context=c.getContext("2d");
+	    var img=document.getElementById("scream");
+	    context.drawImage(img,0,0);
+
+	    data = context.getImageData(0, 0, 1, 1).data;
+
+	    for(a=0;a<3;a++){
+			pixels[a] = [];
+			for(x=0;x<width;x++){
+				pixels[a][x] = [];
+			    for(y=0;y<height;y++){
+			    	pixel = parseInt((context.getImageData(x, y, 1, 1).data)[a]/quality);
+			    	dtc.push(parseInt((context.getImageData(x, y, 1, 1).data)[a]/64));
+			    	pixels[a][x][y] = pixel;
+			    	order.push(pixel);
+			    }
+		    }
+	    }
+
+	    var bitmap = [];
+	    var last   = 0;
+	    var num    = 0;
+
+	    for(i=0;i<dtc.length;i++){
+	    	if(last==dtc[i]){
+	    		num++;
+	    	}else{
+	    		bitmap.push(num);
+	    		last = dtc[i];
+	    		num = 0;
+	    	}
+	    }
+
+	    console.log(order);
+
+	    var out = "";
+	    var a = 0;
+	    var r = 0;
+
+	    while(a<order.length){
+	    	out += bit(order.slice(a, a+bitmap[r]));
+	    	a+=bitmap[r];
+	    	r++;
+	    }
+
+	    console.log(out.length/8);
+	    console.log(bitmap.length*5/8);
+
+	    //Solve
+
+	    var a = 0;
+	    var r = 0;
+	    var inp = [];
+
+	    while(a<order.length){
+	    	inp = inp.concat(solve(out.substr(a,bitmap[r]*3),bitmap[r]));
+	    	a+=bitmap[r];
+	    	r++;
+	    }
+
+	    for(x=0;x<width;x++){
+	    	for(y=0;y<height;y++){
+				setPixel(imageData, x, y, parseInt(pixels[0][x][y]*quality),parseInt(pixels[1][x][y]*quality),parseInt(pixels[2][x][y]*quality), 255);
+			}
+		}
+	};
+
+</script>
